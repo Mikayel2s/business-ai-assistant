@@ -1,0 +1,4192 @@
+{
+  "name": "Business Assistant V2.5.1 - PostgreSQL Migration",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "maxResults": 1,
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        240,
+        -144
+      ],
+      "id": "3e82f1ea-ccf2-45c0-8b9e-23b0478a326b",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Summarize this email in 2–3 concise sentences.\n\nThe summary must accurately describe the type of document.\n\nGeneral Rules\n\n- Never invent information.\n- Never use transport terminology unless the email is actually a transport request.\n- Never describe addresses as pickup or delivery locations unless they are part of a transport request.\n- Never describe products as cargo unless they are part of a transport request.\n- Ignore email signatures, legal disclaimers and boilerplate unless they are essential to understanding the document.\n- Keep the summary factual and concise.\n\nTransport Requests\n\nIf the email is a transport request, always preserve:\n\n- pickup location\n- delivery location\n- cargo details\n- vehicle type\n- loading date\n- delivery date\n- requested date (if present)\n- contact person\n- priority (if mentioned)\n\nInvoices\n\nMention:\n\n- supplier\n- invoice number\n- amount\n- currency\n- due date\n- payment terms (if available)\n\nReceipts\n\nSummarize the purchase naturally.\n\nWhen appropriate, mention:\n\n- merchant\n- purchased product(s) or service(s)\n- total amount\n- currency\n- payment method\n- purchase date\n\nFor food deliveries, restaurants, hotels, online purchases and retail purchases:\n\n- Do NOT use transport terminology.\n- Do NOT mention pickup location.\n- Do NOT mention delivery location.\n- Do NOT mention cargo.\n- Do NOT mention loading date.\n- Do NOT mention unloading date.\n- Do NOT describe the purchase as a shipment or transport request.\n\nInstead, describe what was purchased in natural language.\n\nIgnore email signatures, company signatures, office addresses, postal addresses, contact blocks and legal disclaimers unless they are essential to understanding the receipt.\n\nDo NOT mention business addresses, office locations, pickup points or store locations in receipt summaries unless they are the subject of the purchase itself.\n\nQuotations\n\nMention:\n\n- company\n- quoted product or service\n- quoted amount\n- validity date\n- payment terms (if available)\n\nFrom:\n{{ $node[\"Get a message\"].json[\"from\"][\"text\"] }}\n\nSubject:\n{{ $node[\"Get a message\"].json[\"subject\"] }}\n\nContent:\n{{ $node[\"Get a message\"].json[\"text\"] }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        912,
+        -144
+      ],
+      "id": "2a5baf8c-b0db-4fa2-a96b-feeff52a0b79",
+      "name": "OpenAI Summary",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qla3Fqrk6Okja416",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are an email classification assistant.\n\nYour task is to classify the email into EXACTLY ONE category.\n\nCategories:\n\n- Transport Request\n- Quotation Request\n- Invoice\n- Receipt\n- System Notification\n- Unknown\n\nDecision Rules:\n\nTransport Request:\nONLY use this category when the sender is actively requesting transport services for a shipment.\n\nExamples:\n- Please arrange transport from Sofia to Munich.\n- We need a truck tomorrow.\n- Pickup on Monday, delivery Tuesday.\n- Transport required for 12 pallets.\n\nDo NOT classify as Transport Request if the email:\n- discusses logistics in general\n- contains educational content\n- contains marketing material\n- contains company news\n- contains newsletters\n- explains how transport works\n- advertises services\n- contains blog articles\n- only mentions transport-related terminology\n\nQuotation Request:\nONLY if the sender is requesting a quotation, freight rate, commercial offer or price.\n\nInvoice:\nONLY if the email contains an invoice, billing request, invoice number or payment document.\n\nReceipt:\nONLY if the email confirms a completed payment or contains proof of payment.\n\nSystem Notification:\nONLY for automated emails such as:\n- verification codes\n- OTP\n- password reset\n- login alerts\n- security notifications\n- account verification\n\nUnknown:\nEverything else.\n\nWhen uncertain, ALWAYS choose Unknown instead of guessing.\n\nSubject:\n{{ $node[\"Get a message\"].json[\"subject\"] }}\n\nContent:\n{{ $('OpenAI Summary').item.json.output[0].content[0].text }}\n\nReturn ONLY valid JSON:\n\nReturn ONLY raw JSON.\n\nDo NOT use markdown.\n\nDo NOT wrap the response in ```json.\n\nDo NOT add explanations.\n\nExample:\n\n{\n  \"category\": \"Invoice\",\n  \"confidence\": 97\n}\n{\n  \"category\": \"Invoice\",\n  \"confidence\": 97\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1216,
+        -144
+      ],
+      "id": "2171e245-e87a-4061-a45e-97cfe82a23da",
+      "name": "OpenAI Classifier",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qla3Fqrk6Okja416",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "wvartanqn@gmail.com",
+        "subject": "=🚚 New Transport Request | {{ $json.Subject }}",
+        "message": "=<h2>🚚 New Transport Request</h2>\n\n<hr>\n\n<p><strong>📌 Subject:</strong><br>\n{{ $json.Subject }}</p>\n\n<p><strong>👤 Sender:</strong><br>\n{{ $json.From }}</p>\n\n<p><strong>📂 Category:</strong><br>\n{{ $json.Category }}</p>\n\n<p><strong>📝 Summary:</strong><br>\n{{ $json.Summary }}</p>\n\n<p><strong>⏰ Received:</strong><br>\n{{ $json.Date }}</p>\n\n<hr>\n\n<p><em>Generated automatically by Business Assistant V2</em></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3968,
+        -768
+      ],
+      "id": "0d288376-8150-4f61-b0ef-39d282989789",
+      "name": "Send a message",
+      "webhookId": "7e24e92e-efaa-403b-b7b1-adb4b68d060d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Return ONLY raw JSON.\nDo not use markdown.\nDo not use ```json blocks.\n\nYou are an AI logistics extraction assistant.\n\nExtract the following information from the email.\n\nNever invent information.\n\nIf information is missing, return \"Unknown\".\n\nAlso determine the transport priority.\n\nPriority Rules:\n\nHigh\n- Urgent shipment\n- ASAP\n- Immediate loading\n- Loading today or tomorrow\n- Critical delivery\n- Time-sensitive cargo\n- ADR cargo with urgent deadlines\n- Temperature-controlled cargo with urgent deadlines\n\nMedium\n- Standard commercial transport.\n- Default if no urgency is indicated.\n\nLow\n- Flexible loading dates.\n- No urgency mentioned.\n- Long planning horizon.\n\nThe \"priority\" field must contain ONLY one of:\n- High\n- Medium\n- Low\n\nExtract loading dates, requested dates, pickup dates, collection dates, unloading dates, delivery dates, and transport dates.\n\nIf multiple dates are mentioned, use the most appropriate value for each field.\n\nReturn ONLY valid JSON.\n\n{\n  \"customer\": \"\",\n  \"reference_number\": \"\",\n  \"pickup_location\": \"\",\n  \"delivery_location\": \"\",\n  \"cargo_details\": \"\",\n  \"weight\": \"\",\n  \"volume\": \"\",\n  \"number_of_pallets\": \"\",\n  \"vehicle_type\": \"\",\n  \"adr\": \"\",\n  \"temperature_controlled\": \"\",\n  \"incoterms\": \"\",\n  \"loading_date\": \"\",\n  \"delivery_date\": \"\",\n  \"requested_date\": \"\",\n  \"contact_person\": \"\",\n  \"phone\": \"\",\n  \"email\": \"\",\n  \"special_instructions\": \"\",\n  \"priority\": \"\"\n}\n\nNotes:\n\n- Extract the customer/company name if mentioned.\n- Extract the shipment or transport reference number if present.\n  It may appear as:\n  - Reference\n  - Reference Number\n  - Transport Reference\n  - Booking Number\n  - Booking ID\n  - Shipment Reference\n  - Shipment ID\n  - Load ID\n  - Load Number\n  - Consignment Number\n  - Job Number\n  - Transport Order Number\n\n- Extract the required vehicle or truck type if mentioned.\n- ADR must be \"Yes\" or \"No\".\n- Temperature Controlled must be \"Yes\" or \"No\".\n- Extract Incoterms if present (EXW, FCA, CPT, CIP, DAP, DPU, DDP, FOB, CFR, CIF, etc.).\n- Number of pallets should contain only the numeric value if possible.\n- Weight should include its unit if provided.\n- Volume should include its unit if provided.\n- Preserve phone numbers exactly as written.\n- Preserve email addresses exactly as written.\n- Place any loading instructions, delivery instructions, appointment requirements, security requirements, driver instructions, or other operational notes into \"special_instructions\".\n\nSubject:\n{{ $node[\"Get a message\"].json[\"subject\"] }}\n\nEmail:\n{{ $node[\"Get a message\"].json[\"text\"] }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2080,
+        -624
+      ],
+      "id": "f8d87569-539a-4a6f-b04f-5b136d1a293b",
+      "name": "OpenAI Transport Extractor",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qla3Fqrk6Okja416",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63a605d3-623a-4e65-bf37-3de4d9f60f95",
+              "name": "TransportJSON",
+              "value": "={{ JSON.parse($json.output[0].content[0].text) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2464,
+        -880
+      ],
+      "id": "46b34da8-9c7d-4c62-895e-a103be0cb4d9",
+      "name": "Transport JSON Parser"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "Label_3931154714127425566"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4240,
+        -768
+      ],
+      "id": "dbd09ffc-d47c-4f55-890e-4f07ec339694",
+      "name": "Add label to message",
+      "webhookId": "cb86e16d-792f-4983-8bf1-489235defb33",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.output[0].content[0].text).category }}",
+                    "rightValue": "Transport Request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "470e1f02-9441-411a-95b0-990c4dfce973"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Transport Route"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d55ea27b-4867-4ca6-b4d0-14ba6af87f00",
+                    "leftValue": "={{ JSON.parse($json.output[0].content[0].text).category }}",
+                    "rightValue": "Quotation Request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Quotation Route"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2968b2a4-b9eb-405e-8fbd-da764bdc24d9",
+                    "leftValue": "={{ JSON.parse($json.output[0].content[0].text).category }}",
+                    "rightValue": "Invoice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Invoice Route"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1b2f354e-df5a-47ee-bebc-9495cc9fc09e",
+                    "leftValue": "={{ JSON.parse($json.output[0].content[0].text).category }}",
+                    "rightValue": "=Receipt",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Receipt Route"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "08b6f865-bcc6-4bd9-85f4-1ea685617fea",
+                    "leftValue": "={{ JSON.parse($json.output[0].content[0].text).category }}",
+                    "rightValue": "Unknown",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Unknown Route"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "e7b1766c-4cab-4bd9-b9ba-7991816b19f6",
+                    "leftValue": "={{ JSON.parse($json.output[0].content[0].text).category }}",
+                    "rightValue": "System Notification",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "System Notification Route"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1632,
+        -208
+      ],
+      "id": "a3b9e60d-bcb2-4381-bc54-5dc9e9301e07",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "Label_1986683086060033829"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4240,
+        -352
+      ],
+      "id": "15741aad-18f8-45cd-a491-23c0f3ea4519",
+      "name": "Add Label - Quotation Request",
+      "webhookId": "1bd3241e-3446-4a32-b124-4183a553803f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "Label_7591342434555869235"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4256,
+        80
+      ],
+      "id": "fdd2b123-490a-4ea0-a9b5-7c7e0639aded",
+      "name": "Add label - Invoice",
+      "webhookId": "49a1ed79-51fc-4752-9b7c-78c8dedac0e5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "Label_2269473354691406812"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4272,
+        480
+      ],
+      "id": "0d5fc7b3-9a40-4810-b881-2acb53254339",
+      "name": "Add label - Receipt",
+      "webhookId": "b06cea83-c498-48aa-b176-11c51c1e4e2f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "Label_6348541475446685537"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2288,
+        448
+      ],
+      "id": "5c7f9688-228f-48f2-a8a8-2ab494622e0d",
+      "name": "Add label - Unknown",
+      "webhookId": "37a11429-5905-461f-bfce-04faa13f39d0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        -144
+      ],
+      "id": "53223be5-8c04-4921-b0c0-63753781c857",
+      "name": "Get a message",
+      "webhookId": "1b71fd1a-4ee2-4ba3-ae2b-b4787edcc2a2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "labelIds": [
+          "Label_2443355494130530072"
+        ]
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        496
+      ],
+      "id": "a50cfc55-f19c-44eb-972d-89cde7c596f7",
+      "name": "Add label - System Notification",
+      "webhookId": "8900be88-ee88-4e96-8ae1-7cdf71c9b9cf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aJanBRjvousDKFma",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Return ONLY raw JSON.\n\nDo not use markdown.\nDo not use json code blocks.\n\n{\n  \"quote_number\": \"\",\n  \"company\": \"\",\n  \"amount\": \"\",\n  \"currency\": \"\",\n  \"quote_date\": \"\",\n  \"valid_until\": \"\",\n  \"contact_person\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\",\n  \"service_product\": \"\",\n  \"incoterms\": \"\",\n  \"payment_terms\": \"\",\n  \"lead_time\": \"\",\n  \"notes\": \"\",\n  \"priority\": \"\"\n}\n\nIMPORTANT:\nIf the amount contains a currency (e.g. \"EUR 1250.00\", \"1250 EUR\", \"$500\", \"£99.99\"), split it correctly.\n\n- amount must contain ONLY the numeric value.\n- currency must contain ONLY the currency code or symbol (EUR, USD, GBP, BGN, CHF, PLN, RON, etc.).\n\nExtract Incoterms if present (EXW, FCA, CPT, CIP, DAP, DPU, DDP, FOB, CFR, CIF, FAS, etc.).\n\nExtract payment terms if mentioned (Net 30, Net 60, Advance Payment, COD, etc.).\n\nExtract lead time if mentioned (e.g. \"7 days\", \"2 weeks\", \"Available immediately\").\n\nDetermine the quotation priority.\n\nPriority rules:\n\nHigh:\n- The email contains words such as \"urgent\", \"ASAP\", \"immediately\", \"priority\", \"today\", \"tomorrow\", \"as soon as possible\".\n- The customer requests a fast response.\n\nMedium:\n- Standard quotation request.\n\nLow:\n- Informational enquiry with no urgency.\n\nReturn ONLY:\nHigh\nMedium\nLow\n\nNever invent information.\n\nIf information is missing, return \"Unknown\".\n\nSubject:\n{{ $node[\"Get a message\"].json[\"subject\"] }}\n\nEmail:\n{{ $node[\"Get a message\"].json[\"text\"] }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        -368
+      ],
+      "id": "11cc9eaf-01d7-4644-90b9-416d844775b7",
+      "name": "OpenAI Quotation Extractor",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qla3Fqrk6Okja416",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63a605d3-623a-4e65-bf37-3de4d9f60f95",
+              "name": "QuotationJSON",
+              "value": "={{ JSON.parse($json.output[0].content[0].text) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2448,
+        -560
+      ],
+      "id": "453e40f4-72b8-4fbe-a5f2-32c86ff484d3",
+      "name": "Quotation JSON Parser"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Return ONLY raw JSON.\n\nDo not use markdown.\nDo not use ```json code blocks.\n\nYou are an AI invoice extraction assistant.\n\nExtract the following information from the invoice or invoice email.\n\nNever invent information.\n\nIf information is missing, return \"Unknown\".\n\nReturn ONLY valid JSON.\n\n{\n  \"supplier\": \"\",\n  \"invoice_number\": \"\",\n  \"invoice_date\": \"\",\n  \"due_date\": \"\",\n  \"amount\": \"\",\n  \"currency\": \"\",\n  \"vat_amount\": \"\",\n  \"purchase_order\": \"\",\n  \"payment_terms\": \"\",\n  \"iban\": \"\",\n  \"billing_contact\": \"\",\n  \"priority\": \"\"\n}\n\nIMPORTANT:\n\nIf the amount contains a currency (e.g. \"EUR 1250.00\", \"1250 EUR\", \"$500\", \"£99.99\"), split it correctly.\n\n- amount must contain ONLY the numeric value.\n- currency must contain ONLY the currency code or symbol (EUR, USD, GBP, BGN, CHF, PLN, RON, etc.).\n\nNotes:\n\n- Extract the supplier/company issuing the invoice.\n- Extract the invoice number.\n- Extract the invoice date if present.\n- Extract the payment due date if present.\n- Extract the VAT amount if explicitly stated.\n- Extract the purchase order (PO) number if present.\n- Extract the payment terms (e.g. Net 30, Net 14, Due upon receipt).\n- Extract the IBAN if present.\n- Extract the billing contact if present.\n\nDetermine the invoice priority.\n\nHigh:\n- The email contains:\n  - urgent\n  - overdue\n  - immediate payment\n  - final notice\n  - final reminder\n  - payment reminder\n  - past due\n\nMedium:\n- Standard invoice.\n\nLow:\n- Invoice clearly states payment is not urgent or payment terms exceed 30 days.\n\nSubject:\n{{ $node[\"Get a message\"].json[\"subject\"] }}\n\nEmail:\n{{ $node[\"Get a message\"].json[\"text\"] }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2368,
+        -176
+      ],
+      "id": "3743694a-7e7b-48a2-acaa-15773f1452fb",
+      "name": "OpenAI Invoice Extractor",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qla3Fqrk6Okja416",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63a605d3-623a-4e65-bf37-3de4d9f60f95",
+              "name": "InvoiceJSON",
+              "value": "={{ JSON.parse($json.output[0].content[0].text) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2784,
+        -160
+      ],
+      "id": "851b0cfd-8fdf-4d7d-adb1-4f4da8b916c2",
+      "name": "Invoice JSON Parser"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "16n0_Oxoybq45n6fZSRRH-vRHpUkVpB3cX7-rIvmXtAU",
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16n0_Oxoybq45n6fZSRRH-vRHpUkVpB3cX7-rIvmXtAU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16n0_Oxoybq45n6fZSRRH-vRHpUkVpB3cX7-rIvmXtAU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ DateTime.now().setZone('Europe/Sofia').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "From": "={{ $('Gmail Trigger').item.json.From }}",
+            "Category": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).category }}",
+            "Confidence": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).confidence }}",
+            "Subject": "={{ $('Gmail Trigger').item.json.Subject }}",
+            "Summary": "={{ $('OpenAI Summary').item.json.output[0].content[0].text }}",
+            "Unique Key": "={{ $('Gmail Trigger').item.json.id }}",
+            "Invoice Number": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.invoice_number }}",
+            "Supplier": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.supplier }}",
+            "Amount": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.amount }}",
+            "Currency": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.currency }}",
+            "Due Date": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.due_date }}",
+            "Billing Contact": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.billing_contact }}",
+            "Status": "New",
+            "Priority": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.priority }}",
+            "Invoice Date": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.invoice_date }}",
+            "VAT Amount": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.vat_amount }}",
+            "Purchase Order": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.purchase_order }}",
+            "Payment Terms": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.payment_terms }}",
+            "IBAN": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.iban }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Confidence",
+              "displayName": "Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Supplier",
+              "displayName": "Supplier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice Number",
+              "displayName": "Invoice Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice Date",
+              "displayName": "Invoice Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Due Date",
+              "displayName": "Due Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "VAT Amount",
+              "displayName": "VAT Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Purchase Order",
+              "displayName": "Purchase Order",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Payment Terms",
+              "displayName": "Payment Terms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "IBAN",
+              "displayName": "IBAN",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Billing Contact",
+              "displayName": "Billing Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unique Key",
+              "displayName": "Unique Key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3920,
+        80
+      ],
+      "id": "bd1fe5eb-ab7a-4d46-a460-9b1b2dac9d46",
+      "name": "Append Invoice Row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fqBziSW7OuvMgJBl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Return ONLY raw JSON.\n\nDo not use markdown.\nDo not use ```json code blocks.\n\nYou are an AI receipt extraction assistant.\n\nExtract the following information from the receipt or payment confirmation.\n\nNever invent information.\n\nIf information is missing, return \"Unknown\".\n\nReturn ONLY valid JSON.\n\n{\n  \"merchant\": \"\",\n  \"receipt_number\": \"\",\n  \"purchase_date\": \"\",\n  \"amount\": \"\",\n  \"currency\": \"\",\n  \"vat_amount\": \"\",\n  \"payment_method\": \"\",\n  \"transaction_id\": \"\",\n  \"contact\": \"\",\n  \"priority\": \"\"\n}\n\nIMPORTANT:\n\nIf the amount contains a currency (e.g. \"EUR 1250.00\", \"1250 EUR\", \"$500\", \"£99.99\"), split it correctly.\n\n- amount must contain ONLY the numeric value.\n- currency must contain ONLY the currency code or symbol (EUR, USD, GBP, BGN, CHF, PLN, RON, etc.).\n\nNotes:\n\n- Extract the merchant/company name.\n- Extract the receipt number if present.\n- Extract the receipt/payment date.\n- Extract the VAT amount if explicitly stated.\n- Extract the payment method (Card, Cash, Bank Transfer, PayPal, etc.).\n- Extract the transaction ID if present.\n- Extract the contact person if mentioned.\n\nDetermine the receipt priority.\n\nPriority rules:\n\n- High:\n  - The receipt mentions urgent reimbursement.\n  - The email contains words such as \"urgent\", \"ASAP\", \"immediately\", or \"priority\".\n\n- Medium:\n  - Business-related receipt requiring processing or reimbursement.\n\n- Low:\n  - Standard receipt with no urgency.\n\nReturn ONLY one of:\nHigh\nMedium\nLow\n\nSubject:\n{{ $node[\"Get a message\"].json[\"subject\"] }}\n\nEmail:\n{{ $node[\"Get a message\"].json[\"text\"] }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2448,
+        64
+      ],
+      "id": "e5f2ab66-0647-49fe-a859-5518fe068f7c",
+      "name": "OpenAI Receipt Extractor",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qla3Fqrk6Okja416",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63a605d3-623a-4e65-bf37-3de4d9f60f95",
+              "name": "ReceiptJSON",
+              "value": "={{ JSON.parse($json.output[0].content[0].text) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2752,
+        160
+      ],
+      "id": "0971e912-ce70-4c0c-926d-a0d6d1d71c77",
+      "name": "Receipt JSON Parser"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1IN35IdRjF07TDz0dNYwjkkHT6sBQ-Scg6NE9dDA8uxo",
+          "mode": "list",
+          "cachedResultName": "Business Assistant V2.5",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IN35IdRjF07TDz0dNYwjkkHT6sBQ-Scg6NE9dDA8uxo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Transport Requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IN35IdRjF07TDz0dNYwjkkHT6sBQ-Scg6NE9dDA8uxo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ DateTime.now().setZone('Europe/Sofia').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "From": "={{ $('Gmail Trigger').item.json.From }}",
+            "Subject": "={{ $('Gmail Trigger').item.json.Subject }}",
+            "Summary": "={{ $('OpenAI Summary').item.json.output[0].content[0].text }}",
+            "Category": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).category }}",
+            "Unique Key": "={{ $('Gmail Trigger').item.json.id }}",
+            "Pickup Location": "={{ $json.TransportJSON?.pickup_location || '' }}",
+            "Status": "New",
+            "Priority": "={{ $json.TransportJSON?.priority || 'Medium' }}",
+            "Confidence": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).confidence }}",
+            "Vehicle Type": "={{ $json.TransportJSON?.vehicle_type || '' }}",
+            "Customer": "={{ $json.TransportJSON?.customer || '' }}",
+            "Reference Number": "={{ $json.TransportJSON?.reference_number || '' }}",
+            "Weight": "={{ $json.TransportJSON?.weight || '' }}",
+            "Volume": "={{ $json.TransportJSON?.volume || '' }}",
+            "Number of Pallets": "={{ $json.TransportJSON?.number_of_pallets || '' }}",
+            "ADR": "={{ $json.TransportJSON?.adr || '' }}",
+            "Temperature Controlled": "={{ $json.TransportJSON?.temperature_controlled || '' }}",
+            "Special Instructions": "={{ $json.TransportJSON?.special_instructions || '' }}",
+            "Email": "={{ $json.TransportJSON?.email || '' }}",
+            "Phone": "={{ \"'\" + ($json.TransportJSON?.phone || '') }}",
+            "Delivery Date": "={{ $json.TransportJSON?.delivery_date || '' }}",
+            "Loading Date": "={{ $json.TransportJSON?.loading_date || '' }}",
+            "Incoterms": "={{ $json.TransportJSON?.incoterms || '' }}",
+            "Delivery Location": "={{ $json.TransportJSON?.delivery_location || '' }}",
+            "Cargo Details": "={{ $json.TransportJSON?.cargo_details || '' }}",
+            "Requested Date": "={{ $json.TransportJSON?.requested_date || '' }}",
+            "Contact Person": "={{ $json.TransportJSON?.contact_person || '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Confidence",
+              "displayName": "Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reference Number",
+              "displayName": "Reference Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pickup Location",
+              "displayName": "Pickup Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Delivery Location",
+              "displayName": "Delivery Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Cargo Details",
+              "displayName": "Cargo Details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Weight",
+              "displayName": "Weight",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Volume",
+              "displayName": "Volume",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Number of Pallets",
+              "displayName": "Number of Pallets",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Vehicle Type",
+              "displayName": "Vehicle Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ADR",
+              "displayName": "ADR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Temperature Controlled",
+              "displayName": "Temperature Controlled",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Incoterms",
+              "displayName": "Incoterms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Loading Date",
+              "displayName": "Loading Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Delivery Date",
+              "displayName": "Delivery Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Requested Date",
+              "displayName": "Requested Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact Person",
+              "displayName": "Contact Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Special Instructions",
+              "displayName": "Special Instructions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unique Key",
+              "displayName": "Unique Key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3680,
+        -768
+      ],
+      "id": "cb3e0d13-b0e1-41c8-8bcb-416f0cd92638",
+      "name": "Append Row Transport Request",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fqBziSW7OuvMgJBl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2a391653-c788-484d-98c9-7f504a6cdd54",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "New Transport Request",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -144
+      ],
+      "id": "d5cfeb35-806f-4f63-b96e-3219c2d5b239",
+      "name": "Duplicate Email?"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3312,
+        -896
+      ],
+      "id": "f21e33bc-c555-4971-957b-3c27f7fe6ae6",
+      "name": "Merge Transport Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "12W6UPpFqMqNWgXlKUx2vKyFDpAKQ_hA3D0MDSjvCNFw",
+          "mode": "list",
+          "cachedResultName": "Receipts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12W6UPpFqMqNWgXlKUx2vKyFDpAKQ_hA3D0MDSjvCNFw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Receipts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12W6UPpFqMqNWgXlKUx2vKyFDpAKQ_hA3D0MDSjvCNFw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ DateTime.now().setZone('Europe/Sofia').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "From": "={{ $('Gmail Trigger').item.json.From }}",
+            "Subject": "={{ $('Gmail Trigger').item.json.Subject }}",
+            "Category": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).category }}",
+            "Confidence": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).confidence }}",
+            "Vendor": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.merchant }}",
+            "Purchase Date": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.purchase_date }}",
+            "Amount": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.amount }}",
+            "Currency": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.currency }}",
+            "VAT Amount": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.vat_amount }}",
+            "Transaction ID": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.transaction_id }}",
+            "Payment Method": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.payment_method }}",
+            "Unique Key": "={{ $('Gmail Trigger').item.json.id }}",
+            "Summary": "={{ $('OpenAI Summary').item.json.output[0].content[0].text }}",
+            "Contact": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.contact }}",
+            "Status": "New",
+            "Priority": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.priority }}",
+            "Receipt Number": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.receipt_number }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Confidence",
+              "displayName": "Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Vendor",
+              "displayName": "Vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt Number",
+              "displayName": "Receipt Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Purchase Date",
+              "displayName": "Purchase Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "VAT Amount",
+              "displayName": "VAT Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Method",
+              "displayName": "Payment Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Transaction ID",
+              "displayName": "Transaction ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contact",
+              "displayName": "Contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unique Key",
+              "displayName": "Unique Key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3856,
+        496
+      ],
+      "id": "99eb06f5-fcc6-433b-ad02-b231eb4d15f5",
+      "name": "Append Receipt Row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fqBziSW7OuvMgJBl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1NtQc4Ch8_75ArSuoEGx6Lkdot0XIil_9eeOK80n3a9k",
+          "mode": "list",
+          "cachedResultName": "Quotations",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NtQc4Ch8_75ArSuoEGx6Lkdot0XIil_9eeOK80n3a9k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Quotations",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NtQc4Ch8_75ArSuoEGx6Lkdot0XIil_9eeOK80n3a9k/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ DateTime.now().setZone('Europe/Sofia').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "From": "={{ $('Gmail Trigger').item.json.From }}",
+            "Category": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).category }}",
+            "Subject": "={{ $('Gmail Trigger').item.json.Subject }}",
+            "Summary": "={{ $('OpenAI Summary').item.json.output[0].content[0].text }}",
+            "Status": "New",
+            "Priority": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.priority }}",
+            "Unique Key": "={{ $('Gmail Trigger').item.json.id }}",
+            "Confidence": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).confidence }}",
+            "Company": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.company || '' }}",
+            "Quote Number": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.quote_number || '' }}",
+            "Quote Date": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.quote_date || '' }}",
+            "Valid Until": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.valid_until || '' }}",
+            "Amount ": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.amount || '' }}",
+            "Currency": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.currency || '' }}",
+            "Incoterms": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.incoterms || '' }}",
+            "Payment Terms": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.payment_terms || '' }}",
+            "Lead Time": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.lead_time || '' }}",
+            "Contact Person": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.contact_person || '' }}",
+            "Phone": "={{ \"'\" + ($('Quotation JSON Parser').item.json.QuotationJSON.phone || '') }}",
+            "Email": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.email || '' }}",
+            "Notes": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.notes || '' }}",
+            "Product / Service": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.service_product || '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Confidence",
+              "displayName": "Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Quote Number",
+              "displayName": "Quote Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Quote Date",
+              "displayName": "Quote Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Valid Until",
+              "displayName": "Valid Until",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Amount ",
+              "displayName": "Amount ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Incoterms",
+              "displayName": "Incoterms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Payment Terms",
+              "displayName": "Payment Terms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contact Person",
+              "displayName": "Contact Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Product / Service",
+              "displayName": "Product / Service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unique Key",
+              "displayName": "Unique Key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3632,
+        -352
+      ],
+      "id": "5ea6d15e-9cc0-48f6-ac5b-911806d8ac0b",
+      "name": "Append Quotation Row ",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fqBziSW7OuvMgJBl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1IN35IdRjF07TDz0dNYwjkkHT6sBQ-Scg6NE9dDA8uxo",
+          "mode": "list",
+          "cachedResultName": "Business Assistant V2.5",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IN35IdRjF07TDz0dNYwjkkHT6sBQ-Scg6NE9dDA8uxo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Transport Requests",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1IN35IdRjF07TDz0dNYwjkkHT6sBQ-Scg6NE9dDA8uxo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Unique Key",
+              "lookupValue": "={{ $('Gmail Trigger').item.json.id}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2720,
+        -1040
+      ],
+      "id": "efdd4fde-87d1-43db-8e27-4340c7c26b80",
+      "name": "Lookup Transport Duplicate",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fqBziSW7OuvMgJBl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c312d8d3-e869-4f20-916c-2cff11960e65",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2992,
+        -1056
+      ],
+      "id": "92ef731d-459e-4900-8643-4ffd388c4b43",
+      "name": "Transport Duplicate?"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1NtQc4Ch8_75ArSuoEGx6Lkdot0XIil_9eeOK80n3a9k",
+          "mode": "list",
+          "cachedResultName": "Quotations",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NtQc4Ch8_75ArSuoEGx6Lkdot0XIil_9eeOK80n3a9k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Quotations",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NtQc4Ch8_75ArSuoEGx6Lkdot0XIil_9eeOK80n3a9k/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Quote Number",
+              "lookupValue": "={{ $json.QuotationJSON?.quote_number || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2720,
+        -560
+      ],
+      "id": "ce01a986-a18f-4385-9f52-09736791a45c",
+      "name": "Lookup Quotation Duplicate?",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fqBziSW7OuvMgJBl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c312d8d3-e869-4f20-916c-2cff11960e65",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3008,
+        -560
+      ],
+      "id": "2d24e020-6008-43a1-b614-e55402465635",
+      "name": "Quotation Duplicate?"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3344,
+        -496
+      ],
+      "id": "9538eb2e-35a5-40d3-9cc8-869b9bbaf029",
+      "name": "Merge Quotation Data"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "16n0_Oxoybq45n6fZSRRH-vRHpUkVpB3cX7-rIvmXtAU",
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16n0_Oxoybq45n6fZSRRH-vRHpUkVpB3cX7-rIvmXtAU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16n0_Oxoybq45n6fZSRRH-vRHpUkVpB3cX7-rIvmXtAU/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Invoice Number",
+              "lookupValue": "={{ $json.InvoiceJSON?.invoice_number || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2976,
+        -160
+      ],
+      "id": "2227173f-416e-4eca-bead-0f0e2c3e7492",
+      "name": "Lookup Invoice Duplicate?",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fqBziSW7OuvMgJBl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c312d8d3-e869-4f20-916c-2cff11960e65",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3152,
+        -144
+      ],
+      "id": "613364dc-7fc7-4298-af5f-3c71b246b536",
+      "name": "Invoice Duplicate?"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3392,
+        64
+      ],
+      "id": "285a30be-1e78-4e32-a1d5-0555d52e4e88",
+      "name": "Merge Invoice Data"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3392,
+        528
+      ],
+      "id": "3b300188-4606-49b1-89a0-863bdf99f966",
+      "name": "Merge Receipt Data"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "12W6UPpFqMqNWgXlKUx2vKyFDpAKQ_hA3D0MDSjvCNFw",
+          "mode": "list",
+          "cachedResultName": "Receipts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12W6UPpFqMqNWgXlKUx2vKyFDpAKQ_hA3D0MDSjvCNFw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Receipts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12W6UPpFqMqNWgXlKUx2vKyFDpAKQ_hA3D0MDSjvCNFw/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Receipt Number",
+              "lookupValue": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.receipt_number }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2976,
+        224
+      ],
+      "id": "4b6b6ef4-81b0-4f74-a808-b4bc140a73a6",
+      "name": "Lookup Receipt Duplicate?",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fqBziSW7OuvMgJBl",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c312d8d3-e869-4f20-916c-2cff11960e65",
+              "leftValue": "={{ $json.row_number }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3216,
+        256
+      ],
+      "id": "81b50537-fbbc-46d9-8041-b9b2f6e55a73",
+      "name": "Receipt Duplicate?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3186735b-4975-4b56-ad4f-a05db3baf522",
+              "name": "unique_key",
+              "value": "={{ $('Gmail Trigger').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "2102c455-73e1-42bd-8444-825ab617b903",
+              "name": "customer",
+              "value": "={{ $json.TransportJSON.customer }}",
+              "type": "string"
+            },
+            {
+              "id": "8544c997-5eff-4da1-8332-e5ded7e7bfac",
+              "name": "reference_number",
+              "value": "={{ $json.TransportJSON.reference_number }}",
+              "type": "string"
+            },
+            {
+              "id": "cbbae918-1921-454e-9d64-d618a886d045",
+              "name": "pickup_location",
+              "value": "={{ $json.TransportJSON.pickup_location }}",
+              "type": "string"
+            },
+            {
+              "id": "fc897fa0-98d2-4fba-958f-06893bdb8714",
+              "name": "delivery_location",
+              "value": "={{ $json.TransportJSON.delivery_location }}",
+              "type": "string"
+            },
+            {
+              "id": "3e47325f-aed0-49b2-91df-e10dfc09249e",
+              "name": "cargo_details",
+              "value": "={{ $json.TransportJSON.cargo_details }}",
+              "type": "string"
+            },
+            {
+              "id": "1c5e27d1-bd55-499e-ba91-e94d0961390d",
+              "name": "weight",
+              "value": "={{ $json.TransportJSON.weight }}",
+              "type": "string"
+            },
+            {
+              "id": "6c3efa82-5998-4b98-8ebf-39393c0555fe",
+              "name": "volume",
+              "value": "={{ $json.TransportJSON.volume }}",
+              "type": "string"
+            },
+            {
+              "id": "335c0ca9-9a0c-4bd6-8733-999c918a3830",
+              "name": "number_of_pallets",
+              "value": "={{ $json.TransportJSON.number_of_pallets }}",
+              "type": "string"
+            },
+            {
+              "id": "f2167825-99f0-479c-92d6-c7fca0f08680",
+              "name": "vehicle_type",
+              "value": "={{ $json.TransportJSON.vehicle_type }}",
+              "type": "string"
+            },
+            {
+              "id": "59c06605-4a37-40ff-a744-0e2d21d0c400",
+              "name": "adr",
+              "value": "={{ $json.TransportJSON.adr }}",
+              "type": "string"
+            },
+            {
+              "id": "c610553c-e824-46d3-b487-22be6dc1b3a0",
+              "name": "temperature_controlled",
+              "value": "={{ $json.TransportJSON.temperature_controlled }}",
+              "type": "string"
+            },
+            {
+              "id": "30e3db33-1556-4227-aa1e-ed4e2a60c2d0",
+              "name": "incoterms",
+              "value": "={{ $json.TransportJSON.incoterms }}",
+              "type": "string"
+            },
+            {
+              "id": "511cd1ab-c733-457e-a4b5-62df5c75a85a",
+              "name": "loading_date",
+              "value": "={{ $json.TransportJSON.loading_date }}",
+              "type": "string"
+            },
+            {
+              "id": "b64ee57a-7103-48dd-927e-7bc5c59a83d7",
+              "name": "delivery_date",
+              "value": "={{ $json.TransportJSON.delivery_date }}",
+              "type": "string"
+            },
+            {
+              "id": "40a03ac7-a8c0-49af-bb84-4b21b9a7f8a2",
+              "name": "requested_date",
+              "value": "={{ $json.TransportJSON.requested_date }}",
+              "type": "string"
+            },
+            {
+              "id": "73cea3b7-a425-4096-b5d6-5953a99ed7c1",
+              "name": "contact_person",
+              "value": "={{ $json.TransportJSON.contact_person }}",
+              "type": "string"
+            },
+            {
+              "id": "c20bfe98-68b9-416a-8fe4-3d0816d461d2",
+              "name": "phone",
+              "value": "={{ $json.TransportJSON.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "4b3af88f-ff6a-495f-8758-1a3a0f65052e",
+              "name": "email",
+              "value": "={{ $json.TransportJSON.email }}",
+              "type": "string"
+            },
+            {
+              "id": "bd634d11-77d6-4cf8-8b59-172c481fb900",
+              "name": "special_instructions",
+              "value": "={{ $json.TransportJSON.special_instructions }}",
+              "type": "string"
+            },
+            {
+              "id": "e58a0150-3348-4cfd-ab9f-2732a080d2a2",
+              "name": "priority",
+              "value": "={{ $json.TransportJSON.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "b108eaeb-d5c1-4b97-b668-c24ca0932394",
+              "name": "status",
+              "value": "New",
+              "type": "string"
+            },
+            {
+              "id": "e07b844f-f146-4f4c-8d6f-d099148d075a",
+              "name": "subject",
+              "value": "={{ $('Gmail Trigger').item.json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "ba071078-e03a-4f0a-ae22-ccb1e16153c3",
+              "name": "summary",
+              "value": "={{ $('OpenAI Summary').item.json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3680,
+        -960
+      ],
+      "id": "f915559f-2a07-455e-9f6b-204ba490db7a",
+      "name": "Transport Data Mapper"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "58b0246d-63cf-4a74-8b1c-d6888c5f52c4",
+              "name": "unique_key",
+              "value": "={{ $('Gmail Trigger').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "ee82fb0a-72d4-4b67-afe8-0d431cfda79f",
+              "name": "supplier",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.supplier }}",
+              "type": "string"
+            },
+            {
+              "id": "8eb2acc0-3b6c-4b22-a19d-2f00fe6f653b",
+              "name": "invoice_number",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.invoice_number }}",
+              "type": "string"
+            },
+            {
+              "id": "6c15affa-c980-4130-a519-dc2b8702a692",
+              "name": "invoice_date",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.invoice_date }}",
+              "type": "string"
+            },
+            {
+              "id": "b76180b1-2c68-485b-95bd-0143697dfe28",
+              "name": "due_date",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.due_date }}",
+              "type": "string"
+            },
+            {
+              "id": "5db1c254-5a48-494c-bd37-86e0dbd9c3e8",
+              "name": "amount",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.amount }}",
+              "type": "string"
+            },
+            {
+              "id": "4b85636c-374f-4aa1-91be-a30f6f549e6a",
+              "name": "currency",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.currency }}",
+              "type": "string"
+            },
+            {
+              "id": "06ee17c9-ffd0-4315-be1e-fc325894066b",
+              "name": "vat_amount",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.vat_amount }}",
+              "type": "string"
+            },
+            {
+              "id": "fe1a6deb-068a-4725-9028-7c03c2173a1b",
+              "name": "purchase_order",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.purchase_order }}",
+              "type": "string"
+            },
+            {
+              "id": "1ed36489-adb4-44b1-b692-d84bb14b5dd9",
+              "name": "payment_terms",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.payment_terms }}",
+              "type": "string"
+            },
+            {
+              "id": "c27c6d10-541a-45ba-ac52-e35178c7bf64",
+              "name": "iban",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.iban }}",
+              "type": "string"
+            },
+            {
+              "id": "361386d4-b3e7-4874-85e0-971d5599f983",
+              "name": "billing_contact",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.billing_contact }}",
+              "type": "string"
+            },
+            {
+              "id": "38f850f1-2ef0-4332-a9e8-876ad89978e8",
+              "name": "priority",
+              "value": "={{ $('Invoice JSON Parser').item.json.InvoiceJSON.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "639e1384-939e-478d-b706-7dd62fb3fe52",
+              "name": "status",
+              "value": "New",
+              "type": "string"
+            },
+            {
+              "id": "3a577a08-700a-4082-9476-4f142c2b37c5",
+              "name": "subject",
+              "value": "={{ $('Gmail Trigger').item.json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "3cd77106-bfb2-479c-886c-df87a1658887",
+              "name": "summary",
+              "value": "={{ $('OpenAI Summary').item.json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3664,
+        -144
+      ],
+      "id": "f7a6064f-4187-4076-81d2-583f969546de",
+      "name": "Invoice Data Mapper"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "invoices",
+          "mode": "list",
+          "cachedResultName": "invoices"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "unique_key",
+              "displayName": "unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "supplier",
+              "displayName": "supplier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_number",
+              "displayName": "invoice_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_date",
+              "displayName": "invoice_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "due_date",
+              "displayName": "due_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "vat_amount",
+              "displayName": "vat_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "purchase_order",
+              "displayName": "purchase_order",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_terms",
+              "displayName": "payment_terms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "iban",
+              "displayName": "iban",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "billing_contact",
+              "displayName": "billing_contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4240,
+        -144
+      ],
+      "id": "ae4261d5-7aa6-44c1-9221-47313ac1a31e",
+      "name": "Insert Invoice",
+      "credentials": {
+        "postgres": {
+          "id": "Xjzyz1RZG5XV7xor",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e326b1b2-79ac-408f-b03c-4932b3055df5",
+              "name": "unique_key",
+              "value": "={{ $('Gmail Trigger').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "90ab895c-18c4-447b-9dce-5a8278372a4c",
+              "name": "from",
+              "value": "={{ $('Gmail Trigger').item.json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "d7ee64d0-230f-4b28-95d8-ed1710e9418a",
+              "name": "subject",
+              "value": "={{ $('Gmail Trigger').item.json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "501063ad-e4c8-4d87-8f59-dc13daead806",
+              "name": "category",
+              "value": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).category }}",
+              "type": "string"
+            },
+            {
+              "id": "c18122ed-fd36-4c79-a807-7b616cf6a458",
+              "name": "confidence",
+              "value": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).confidence }}",
+              "type": "string"
+            },
+            {
+              "id": "4f1b31f8-db96-415d-b2a5-19f639912903",
+              "name": "vendor",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.merchant }}",
+              "type": "string"
+            },
+            {
+              "id": "d9b83af2-a0f7-43f4-80b5-56fe2ad2fd1b",
+              "name": "receipt_number",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.receipt_number }}",
+              "type": "string"
+            },
+            {
+              "id": "5d7edab8-abb1-4a81-9311-81898a86c482",
+              "name": "purchase_date",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.purchase_date }}",
+              "type": "string"
+            },
+            {
+              "id": "def90c01-7091-48c8-b8f5-c472c0306b21",
+              "name": "amount",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.amount }}",
+              "type": "string"
+            },
+            {
+              "id": "a85548a2-ddc2-4622-959b-a217c82fdde1",
+              "name": "currency",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.currency }}",
+              "type": "string"
+            },
+            {
+              "id": "d858fe15-d928-47e4-88db-270319ea7119",
+              "name": "vat_amount",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.vat_amount }}",
+              "type": "string"
+            },
+            {
+              "id": "0374a127-7fb6-4406-b655-ef0901be8e44",
+              "name": "payment_method",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.payment_method }}",
+              "type": "string"
+            },
+            {
+              "id": "2021dbb0-efb4-4924-b568-9237d155551d",
+              "name": "transaction_id",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.transaction_id }}",
+              "type": "string"
+            },
+            {
+              "id": "40595619-86fd-40b2-9e91-f672aeb39467",
+              "name": "contact",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.contact }}",
+              "type": "string"
+            },
+            {
+              "id": "9264bb80-11fa-4c35-96da-fec77c3957be",
+              "name": "status",
+              "value": "New",
+              "type": "string"
+            },
+            {
+              "id": "644019b0-638f-4ad2-a622-ae1a94864126",
+              "name": "priority",
+              "value": "={{ $('Receipt JSON Parser').item.json.ReceiptJSON.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "31904563-2b93-4c80-bac7-53dbb3e032e6",
+              "name": "summary",
+              "value": "={{ $('OpenAI Summary').item.json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3872,
+        288
+      ],
+      "id": "69a3c766-93a2-4f90-a74d-86eec43bce62",
+      "name": "Receipt Data Mapper"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "receipts",
+          "mode": "list",
+          "cachedResultName": "receipts"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "confidence": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "unique_key",
+              "displayName": "unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "from",
+              "displayName": "from",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "vendor",
+              "displayName": "vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "receipt_number",
+              "displayName": "receipt_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "purchase_date",
+              "displayName": "purchase_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "vat_amount",
+              "displayName": "vat_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "transaction_id",
+              "displayName": "transaction_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contact",
+              "displayName": "contact",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4256,
+        288
+      ],
+      "id": "fd41b755-ea48-41b6-be32-9885ca81d7ba",
+      "name": "Insert Receipt",
+      "credentials": {
+        "postgres": {
+          "id": "Xjzyz1RZG5XV7xor",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e326b1b2-79ac-408f-b03c-4932b3055df5",
+              "name": "unique_key",
+              "value": "={{ $('Gmail Trigger').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "90ab895c-18c4-447b-9dce-5a8278372a4c",
+              "name": "from",
+              "value": "={{ $('Gmail Trigger').item.json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "d7ee64d0-230f-4b28-95d8-ed1710e9418a",
+              "name": "subject",
+              "value": "={{ $('Gmail Trigger').item.json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "501063ad-e4c8-4d87-8f59-dc13daead806",
+              "name": "category",
+              "value": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).category }}",
+              "type": "string"
+            },
+            {
+              "id": "c18122ed-fd36-4c79-a807-7b616cf6a458",
+              "name": "confidence",
+              "value": "={{ JSON.parse($('OpenAI Classifier').item.json.output[0].content[0].text).confidence }}",
+              "type": "string"
+            },
+            {
+              "id": "7c43d8e2-3f34-472d-a333-96a8639637c0",
+              "name": "company",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.company }}",
+              "type": "string"
+            },
+            {
+              "id": "a04a0df3-53b5-4407-ae64-3654211205b7",
+              "name": "quote_number",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.quote_number }}",
+              "type": "string"
+            },
+            {
+              "id": "bb5d4b22-8631-4d3c-bc22-127ce3db0226",
+              "name": "quote_date",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.quote_date }}",
+              "type": "string"
+            },
+            {
+              "id": "3320e780-7c64-4197-8b8b-ddaf270ece2c",
+              "name": "valid_until",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.valid_until }}",
+              "type": "string"
+            },
+            {
+              "id": "bb6c1b6f-c739-4509-893e-1c482d83fcfa",
+              "name": "amount",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.amount }}",
+              "type": "string"
+            },
+            {
+              "id": "05dd9760-96d5-4f12-9901-ab19cc7a2f63",
+              "name": "currency",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.currency }}",
+              "type": "string"
+            },
+            {
+              "id": "308c1188-d5b7-48e5-809e-858df7d4dca1",
+              "name": "incoterms",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.incoterms }}",
+              "type": "string"
+            },
+            {
+              "id": "f0b181a0-a5a1-4a97-8fdd-203c0f5e25cf",
+              "name": "payment_terms",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.payment_terms }}",
+              "type": "string"
+            },
+            {
+              "id": "6ca7dfdd-00ef-4053-9512-de615ec53845",
+              "name": "lead_time",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.lead_time }}",
+              "type": "string"
+            },
+            {
+              "id": "48197036-2671-466f-b9d7-dc5dcb7b8d27",
+              "name": "contact_person",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.contact_person }}",
+              "type": "string"
+            },
+            {
+              "id": "6e38ddfb-b0da-4d88-a3d4-0eb11c75aaea",
+              "name": "email",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.email }}",
+              "type": "string"
+            },
+            {
+              "id": "147219e4-167b-44de-9ab4-dc6d6a448b43",
+              "name": "phone",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "0ee355bf-5140-4a46-b80c-3fece21dca0d",
+              "name": "service_product",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.service_product }}",
+              "type": "string"
+            },
+            {
+              "id": "bc896600-ead1-4e70-a606-dcbafe4f65fd",
+              "name": "notes",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.notes }}",
+              "type": "string"
+            },
+            {
+              "id": "f2488a2b-942c-4f0b-8b5a-40d8feb58ceb",
+              "name": "status",
+              "value": "New",
+              "type": "string"
+            },
+            {
+              "id": "67134063-8c86-44d7-9088-51fa1b9e49e9",
+              "name": "priority",
+              "value": "={{ $('Quotation JSON Parser').item.json.QuotationJSON.priority }}",
+              "type": "string"
+            },
+            {
+              "id": "53c36389-85f8-4618-8b0a-78a2c8c5c974",
+              "name": "summary",
+              "value": "={{ $('OpenAI Summary').item.json.output[0].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3648,
+        -560
+      ],
+      "id": "f3239fd7-f5e9-46f4-a09d-381fd76054f4",
+      "name": "Quotation Data Mapper"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "quotations",
+          "mode": "list",
+          "cachedResultName": "quotations"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "confidence": 0,
+            "amount": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "unique_key",
+              "displayName": "unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "from",
+              "displayName": "from",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "confidence",
+              "displayName": "confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "quote_number",
+              "displayName": "quote_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "quote_date",
+              "displayName": "quote_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "valid_until",
+              "displayName": "valid_until",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "incoterms",
+              "displayName": "incoterms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_terms",
+              "displayName": "payment_terms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_time",
+              "displayName": "lead_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contact_person",
+              "displayName": "contact_person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "service_product",
+              "displayName": "service_product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "notes",
+              "displayName": "notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4240,
+        -560
+      ],
+      "id": "8bbed4f2-fbd2-4936-84bb-799cc56b5c58",
+      "name": "Insert Quotations",
+      "credentials": {
+        "postgres": {
+          "id": "Xjzyz1RZG5XV7xor",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "transport_requests",
+          "mode": "list",
+          "cachedResultName": "transport_requests"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "unique_key",
+              "displayName": "unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer",
+              "displayName": "customer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reference_number",
+              "displayName": "reference_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pickup_location",
+              "displayName": "pickup_location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "delivery_location",
+              "displayName": "delivery_location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cargo_details",
+              "displayName": "cargo_details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "weight",
+              "displayName": "weight",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "volume",
+              "displayName": "volume",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "number_of_pallets",
+              "displayName": "number_of_pallets",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "vehicle_type",
+              "displayName": "vehicle_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "adr",
+              "displayName": "adr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "temperature_controlled",
+              "displayName": "temperature_controlled",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "incoterms",
+              "displayName": "incoterms",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "loading_date",
+              "displayName": "loading_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "delivery_date",
+              "displayName": "delivery_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "requested_date",
+              "displayName": "requested_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contact_person",
+              "displayName": "contact_person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "special_instructions",
+              "displayName": "special_instructions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4256,
+        -960
+      ],
+      "id": "2682ca46-7133-4e52-9a29-1669c9df2865",
+      "name": "Insert Transport",
+      "credentials": {
+        "postgres": {
+          "id": "Xjzyz1RZG5XV7xor",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Summary": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Classifier": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Transport Extractor": {
+      "main": [
+        [
+          {
+            "node": "Transport JSON Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transport JSON Parser": {
+      "main": [
+        [
+          {
+            "node": "Lookup Transport Duplicate",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Transport Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Add label to message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Transport Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Quotation Data",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "OpenAI Quotation Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge Invoice Data",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "OpenAI Invoice Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenAI Receipt Extractor",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Receipt Data",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Add label - Unknown",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Add label - System Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Label - Quotation Request": {
+      "main": [
+        []
+      ]
+    },
+    "Add label - Invoice": {
+      "main": [
+        []
+      ]
+    },
+    "Add label - Receipt": {
+      "main": [
+        []
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Quotation Extractor": {
+      "main": [
+        [
+          {
+            "node": "Quotation JSON Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quotation JSON Parser": {
+      "main": [
+        [
+          {
+            "node": "Lookup Quotation Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Invoice Extractor": {
+      "main": [
+        [
+          {
+            "node": "Invoice JSON Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice JSON Parser": {
+      "main": [
+        [
+          {
+            "node": "Lookup Invoice Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Receipt Extractor": {
+      "main": [
+        [
+          {
+            "node": "Receipt JSON Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receipt JSON Parser": {
+      "main": [
+        [
+          {
+            "node": "Lookup Receipt Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Row Transport Request": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Email?": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Transport Data": {
+      "main": [
+        [
+          {
+            "node": "Append Row Transport Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Transport Data Mapper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Quotation Row ": {
+      "main": [
+        [
+          {
+            "node": "Add Label - Quotation Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Transport Duplicate": {
+      "main": [
+        [
+          {
+            "node": "Transport Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transport Duplicate?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Merge Transport Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Quotation Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Quotation Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quotation Duplicate?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Merge Quotation Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Quotation Data": {
+      "main": [
+        [
+          {
+            "node": "Append Quotation Row ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Quotation Data Mapper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Invoice Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Invoice Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Invoice Row": {
+      "main": [
+        [
+          {
+            "node": "Add label - Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Duplicate?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Merge Invoice Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Invoice Data": {
+      "main": [
+        [
+          {
+            "node": "Append Invoice Row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Invoice Data Mapper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Receipt Row": {
+      "main": [
+        [
+          {
+            "node": "Add label - Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Receipt Data": {
+      "main": [
+        [
+          {
+            "node": "Append Receipt Row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Receipt Data Mapper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lookup Receipt Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Receipt Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receipt Duplicate?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Merge Receipt Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transport Data Mapper": {
+      "main": [
+        [
+          {
+            "node": "Insert Transport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Data Mapper": {
+      "main": [
+        [
+          {
+            "node": "Insert Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receipt Data Mapper": {
+      "main": [
+        [
+          {
+            "node": "Insert Receipt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quotation Data Mapper": {
+      "main": [
+        [
+          {
+            "node": "Insert Quotations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "64c96694-7608-49e3-9ab5-87e1bd2a67b4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8dd98625748fda9a5dcac0c4c42ffc05ea959e2dca03d714d692a5887b9acc68"
+  },
+  "id": "na7IACGp73bLmwYP",
+  "tags": []
+}
