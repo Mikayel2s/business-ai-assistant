@@ -1,0 +1,204 @@
+{
+  "name": "2026-08-04_Orion_Gateway_v1.0",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body || {};\n\n// Missing query field\nif (typeof body.query === \"undefined\") {\n  return [\n    {\n      json: {\n        response: \"Missing required field: query.\"\n      }\n    }\n  ];\n}\n\n// Empty query\nif (typeof body.query !== \"string\" || body.query.trim() === \"\") {\n  return [\n    {\n      json: {\n        response: \"Please enter a search query.\"\n      }\n    }\n  ];\n}\n\n// Valid query\nreturn [\n  {\n    json: {\n      endpoint: \"search\",\n      query: body.query.trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        0
+      ],
+      "id": "6d8e65ac-5b40-4bc6-b1f3-5b74e30a206e",
+      "name": "API Router"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.endpoint }}",
+                    "rightValue": "search",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "0feb2766-db92-44ac-aeed-39bb59aa8431"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Search"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9839b3e9-99c2-4784-9110-0a3682f838f6",
+                    "leftValue": "={{ $json.response }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Error"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        208
+      ],
+      "id": "268b84ec-236b-4b01-a03d-6db1fba31c53",
+      "name": "Endpoint Dispatcher"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/api/v1/search",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        80,
+        0
+      ],
+      "id": "bec20858-9fad-4bbc-8a44-be2a45557c19",
+      "name": "Atlas Search API",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/v1/orion",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -544,
+        0
+      ],
+      "id": "f54aa51a-4162-4336-8465-3a5ec46d2430",
+      "name": "Orion Webhook",
+      "webhookId": "61c7ea9b-c27d-4330-8bc0-f44cca525a41"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        320,
+        80
+      ],
+      "id": "721ad6b9-7c5a-4183-bcfd-d898419012aa",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "API Router": {
+      "main": [
+        [
+          {
+            "node": "Endpoint Dispatcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Endpoint Dispatcher": {
+      "main": [
+        [
+          {
+            "node": "Atlas Search API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orion Webhook": {
+      "main": [
+        [
+          {
+            "node": "API Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atlas Search API": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "cf2cb85f-a81e-436c-84e4-583b5c453be9",
+  "meta": {
+    "instanceId": "8dd98625748fda9a5dcac0c4c42ffc05ea959e2dca03d714d692a5887b9acc68"
+  },
+  "id": "7DafLYAltI32gFqX",
+  "tags": []
+}
