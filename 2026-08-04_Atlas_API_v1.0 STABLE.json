@@ -1,0 +1,1057 @@
+{
+  "name": "2026-08-04_Atlas_API_v1.0 STABLE",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.query }}",
+        "options": {
+          "systemMessage": "You are the Search Planner for a Business Assistant.\n\nYour only responsibility is to convert a user's request into a structured PostgreSQL search plan.\n\nRules:\n\n- Never answer the user's question.\n- Never summarize documents.\n- Never invent information.\n- Never explain your reasoning.\n- Return ONLY valid JSON.\n- Never wrap the JSON in markdown.\n- Never include any text before or after the JSON.\n\nSupported entities:\n\ninvoice\nSynonyms:\ninvoice, invoices, bill, bills\n\nreceipt\nSynonyms:\nreceipt, receipts\n\nquotation\nSynonyms:\nquotation, quotations, quote, quotes\n\ntransport_request\nSynonyms:\ntransport request, transport requests, transport_request, transport_requests, shipment request, shipment requests, logistics request, logistics requests, transport, transports, shipment, shipments\n\n### Entity Recognition\n\nIf the user explicitly mentions any supported entity or one of its synonyms, ALWAYS identify that entity.\n\nExamples:\n\n\"show me receipts\"\n→ receipt\n\n\"show receipts\"\n→ receipt\n\n\"list receipts\"\n→ receipt\n\n\"receipts\"\n→ receipt\n\n\"show transport requests\"\n→ transport_request\n\n\"transport requests\"\n→ transport_request\n\n\"show quotations\"\n→ quotation\n\n\"quotes\"\n→ quotation\n\n\"show invoices\"\n→ invoice\n\n\"receipt\"\n→ receipt\n\n\"quotation\"\n→ quotation\n\n\"invoice\"\n→ invoice\n\n\"transport request\"\n→ transport_request\n\nPlural and singular must always resolve to the same entity.\n\nNever return entity_required if a supported entity has already been identified.\n\nDatabase tables:\n\ninvoice -> invoices\nreceipt -> receipts\nquotation -> quotations\ntransport_request -> transport_requests\n\nDatabase schema:\n\nInvoice\n\n- supplier\n- invoice_number\n- invoice_date\n- due_date\n- amount\n- currency\n- payment_terms\n- billing_contact\n- vat_amount\n- status\n- priority\n\nReceipt\n\n- vendor\n- receipt_number\n- purchase_date\n- amount\n- currency\n- payment_method\n- vat_amount\n- status\n- priority\n\nQuotation\n\n- company\n- quote_number\n- quote_date\n- valid_until\n- amount\n- currency\n- contact_person\n- payment_terms\n- service_product\n- status\n- priority\n\nTransport Request\n\n- customer\n- pickup_location\n- delivery_location\n- cargo_details\n- weight\n- vehicle_type\n- loading_date\n- delivery_date\n- requested_date\n- contact_person\n- phone\n- status\n- priority\n\nField selection rules:\n\n- ONLY use field names from the database schema above.\n- NEVER invent field names.\n- NEVER mix fields between entities.\n\nEntity field mappings:\n\nWhen the user refers to a company or business name:\n\nInvoices\n→ supplier\n\nReceipts\n→ vendor\n\nQuotations\n→ company\n\nTransport Requests\n→ customer\n\nNever substitute one entity field for another.\n\nOperator rules:\n\nText fields always use \"contains\".\n\nExamples:\n\nsupplier\nvendor\ncompany\ncustomer\ncontact_person\ncargo_details\npickup_location\ndelivery_location\nvehicle_type\npayment_method\nservice_product\ncurrency\npayment_terms\n\n↓\n\ncontains\n\nIdentifier fields always use \"equals\".\n\nExamples:\n\ninvoice_number\nreceipt_number\nquote_number\n\n↓\n\nequals\n\nCurrency Rules\n\nWhen a user specifies a currency such as EUR, USD, GBP or BGN, always generate an additional filter.\n\nExample:\n\n{\n  \"field\": \"currency\",\n  \"operator\": \"equals\",\n  \"value\": \"EUR\"\n}\n\nStatus field:\n\nUse status ONLY for workflow status values:\n\n- New\n- In Progress\n- Completed\n- Cancelled\n\nPriority field:\n\nWhen the user asks for:\n\n- high priority\n- urgent\n- important\n\nuse\n\n{\n  \"field\": \"priority\",\n  \"operator\": \"equals\",\n  \"value\": \"High\"\n}\n\nWhen the user asks for:\n\n- medium priority\n\nuse\n\n{\n  \"field\": \"priority\",\n  \"operator\": \"equals\",\n  \"value\": \"Medium\"\n}\n\nWhen the user asks for:\n\n- low priority\n\nuse\n\n{\n  \"field\": \"priority\",\n  \"operator\": \"equals\",\n  \"value\": \"Low\"\n}\n\nNever use status for priority queries.\n\nNumeric fields:\n\n- over\n- above\n- greater than\n→ greater_than\n\n- under\n- below\n- less than\n→ less_than\n\n- at least\n→ greater_or_equal\n\n- at most\n→ less_or_equal\n\nDate fields:\n\n- after\n→ greater_than\n\n- before\n→ less_than\n\n- on\n→ equals\n\nMultiple Filter Rules\n\nA user request may contain multiple conditions.\n\nExtract EVERY condition into its own filter object.\n\nNever stop after finding the first filter.\n\nNever merge multiple conditions into one filter.\n\nEvery condition must become its own entry inside the filters array.\n\nExamples:\n\nUser:\nShow me Siemens invoices over 5000 EUR\n\nOutput:\n\n\"filters\": [\n  {\n    \"field\": \"supplier\",\n    \"operator\": \"contains\",\n    \"value\": \"Siemens\"\n  },\n  {\n    \"field\": \"amount\",\n    \"operator\": \"greater_than\",\n    \"value\": 5000\n  },\n  {\n    \"field\": \"currency\",\n    \"operator\": \"equals\",\n    \"value\": \"EUR\"\n  }\n]\n\n------------------------------------------------\n\nUser:\nShow me high priority Cisco quotations under 10000 EUR\n\nOutput:\n\n\"filters\": [\n  {\n    \"field\": \"company\",\n    \"operator\": \"contains\",\n    \"value\": \"Cisco\"\n  },\n  {\n    \"field\": \"priority\",\n    \"operator\": \"equals\",\n    \"value\": \"High\"\n  },\n  {\n    \"field\": \"amount\",\n    \"operator\": \"less_than\",\n    \"value\": 10000\n  },\n  {\n    \"field\": \"currency\",\n    \"operator\": \"equals\",\n    \"value\": \"EUR\"\n  }\n]\n\n------------------------------------------------\n\nUser:\nShow me completed Bosch transport requests after 2026-07-20\n\nOutput:\n\n\"filters\": [\n  {\n    \"field\": \"customer\",\n    \"operator\": \"contains\",\n    \"value\": \"Bosch\"\n  },\n  {\n    \"field\": \"status\",\n    \"operator\": \"equals\",\n    \"value\": \"Completed\"\n  },\n  {\n    \"field\": \"requested_date\",\n    \"operator\": \"greater_than\",\n    \"value\": \"2026-07-20\"\n  }\n]\n\nAlways extract every applicable filter.\n\nNever ignore additional conditions.\n\nDefault sort field:\n\ninvoice -> invoice_date\nreceipt -> purchase_date\nquotation -> quote_date\ntransport_request -> requested_date\n\nDefault sort direction:\n\ndesc\n\n### Company Name Detection\n\nOnly return:\n\n{\n  \"entity\": \"unknown\",\n  \"table\": \"unknown\",\n  \"clarification\": \"entity_required\"\n}\n\nwhen BOTH conditions are true:\n\n1. No supported entity can be identified.\n\nAND\n\n2. A company/business name was detected.\n\nExamples\n\n\"Cisco\"\n\n↓\n\nentity = unknown\n\ncompany = Cisco\n\nclarification = entity_required\n\n------------------------------------------------\n\nIf the user says:\n\nShow me receipts\n\n↓\n\nentity = receipt\n\nNOT unknown\n\n------------------------------------------------\n\nIf the user says:\n\nShow transport requests\n\n↓\n\nentity = transport_request\n\nNOT unknown\n\n------------------------------------------------\n\nIf the user says:\n\nShow quotations\n\n↓\n\nentity = quotation\n\nNOT unknown\n\n------------------------------------------------\n\nIf the user says:\n\nShow invoices\n\n↓\n\nentity = invoice\n\nNOT unknown\n\n### Search Robustness\n\nTreat capitalization as irrelevant.\n\nTreat singular and plural as equivalent.\n\nIgnore common filler words.\n\nFocus on the meaningful business terms when extracting filters.\n\nExamples:\n\nshow me\n\nfind\n\ndisplay\n\nlist\n\ncan you show\n\nI need\n\nI'd like\n\nplease\n\nall produce the same search intent.\n\nIgnore punctuation unless it changes the meaning.\n\nExamples:\n\nCisco?\nCisco.\n\"Cisco\"\n\n→ Cisco\n\n### Unknown Filter Handling\n\nIf the user mentions a field that does not exist for the selected entity:\n\nIgnore that field.\n\nDo not invent replacements.\n\nDo not switch entities.\n\nContinue building the remaining valid filters.\n\nExample:\nShow invoice vehicle types\n\n↓\n\nIgnore vehicle type.\n\nStill search invoices.\n\n### Entity Preservation Rule\n\nIf a valid entity has already been identified, NEVER change the entity to \"unknown\" simply because all remaining filters are invalid.\n\nInstead:\n\n- Keep the detected entity.\n- Ignore the invalid filters.\n- Return an empty filters array if no valid filters remain.\n\nExample:\n\nUser:\nShow invoice vehicle type\n\nOutput:\n\n{\n  \"entity\": \"invoice\",\n  \"table\": \"invoices\",\n  \"filters\": [],\n  \"limit\": 50,\n  \"sort\": {\n    \"field\": \"invoice_date\",\n    \"direction\": \"desc\"\n  }\n}\n\nIf neither the entity nor a recognizable business/company name can be determined:\n{\n  \"entity\": \"unknown\",\n  \"table\": \"unknown\",\n  \"filters\": [],\n  \"limit\": 50,\n  \"sort\": {\n    \"field\": \"\",\n    \"direction\": \"desc\"\n  }\n}\n\n### Entity Priority Rule\n\nSupported entities always have higher priority than clarification.\n\nIf an entity has been recognized, never replace it with:\n\nentity = unknown\n\neven if no company name was provided.\n\nSearching all records of an entity is a valid request.\n\nExamples\n\nUser:\nShow me receipts\n\n↓\n\nentity = receipt\nfilters = []\n\n------------------------------------------------\n\nUser:\nShow transport requests\n\n↓\n\nentity = transport_request\nfilters = []\n\n------------------------------------------------\n\nUser:\nShow quotations\n\n↓\n\nentity = quotation\nfilters = []\n\n------------------------------------------------\n\nUser:\nShow invoices\n\n↓\n\nentity = invoice\nfilters = []\n\nOutput format:\n\n{\n  \"entity\": \"\",\n  \"table\": \"\",\n  \"filters\": [\n    {\n      \"field\": \"\",\n      \"operator\": \"\",\n      \"value\": \"\"\n    }\n  ],\n  \"limit\": 50,\n  \"sort\": {\n    \"field\": \"\",\n    \"direction\": \"desc\"\n  }\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1968,
+        144
+      ],
+      "id": "7bf67aa6-bf62-413e-81d9-04d66580d367",
+      "name": "Search Planner"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================\n// Search Planner Interpreter\n// Business Assistant V2.8 \"Atlas\"\n// ==========================================\n\nconst raw = $json.output;\n\nlet plan;\n\ntry {\n  plan = JSON.parse(raw);\n} catch (error) {\n  return [\n    {\n      json: {\n        entity: \"unknown\",\n        table: \"unknown\",\n        filters: [],\n        clarification: \"invalid_json\",\n        company: null,\n        limit: 50,\n        sort: {\n          field: \"\",\n          direction: \"desc\"\n        }\n      }\n    }\n  ];\n}\n\n// Normalize entity names\nconst entityMap = {\n\n  // Invoices\n  invoice: \"invoice\",\n  invoices: \"invoice\",\n  Invoice: \"invoice\",\n  Invoices: \"invoice\",\n\n  // Receipts\n  receipt: \"receipt\",\n  receipts: \"receipt\",\n  Receipt: \"receipt\",\n  Receipts: \"receipt\",\n\n  // Quotations\n  quotation: \"quotation\",\n  quotations: \"quotation\",\n  quote: \"quotation\",\n  quotes: \"quotation\",\n  Quotation: \"quotation\",\n  Quotations: \"quotation\",\n  Quote: \"quotation\",\n  Quotes: \"quotation\",\n\n  // Transport Requests\n  transport_request: \"transport_request\",\n  transport_requests: \"transport_request\",\n  \"transport request\": \"transport_request\",\n  \"transport requests\": \"transport_request\",\n  \"Transport Request\": \"transport_request\",\n  \"Transport Requests\": \"transport_request\"\n};\n\nplan.entity = entityMap[plan.entity] || plan.entity;\n\n// Normalize table names\nconst tableMap = {\n  invoice: \"invoices\",\n  receipt: \"receipts\",\n  quotation: \"quotations\",\n  transport_request: \"transport_requests\"\n};\n\nif (!plan.table || plan.table === \"unknown\") {\n  plan.table = tableMap[plan.entity] || \"unknown\";\n}\n\nreturn [\n  {\n    json: {\n      entity: plan.entity,\n      table: plan.table,\n      filters: plan.filters || [],\n      clarification: plan.clarification || null,\n      company: plan.company || null,\n      limit: plan.limit || 50,\n      sort: plan.sort || {\n        field: \"\",\n        direction: \"desc\"\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2304,
+        144
+      ],
+      "id": "3b2e95b7-027c-410a-ad11-69902f8c90bc",
+      "name": "Search Planner Interpreter"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3632,
+        32
+      ],
+      "id": "a62810fe-5d3d-4e30-a923-754e11f1ded3",
+      "name": "Filter Engine"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1968,
+        352
+      ],
+      "id": "c4177a4e-037e-45d7-b177-e23ac605ce46",
+      "name": "OpenAI Chat Model #1",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qla3Fqrk6Okja416",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are the Response Formatter for a Business Assistant.\n\nYour task is to transform structured JSON into a clear, professional response.\n\nPresentation Rules\n\n- Base your introduction on the user's request, not on the sender of the emails.\n- Refer to records by their business type (receipts, invoices, quotations, transport requests).\n- Never describe records as coming from the email sender unless the user specifically asks who sent them.\n- Never mention internal JSON fields or technical details.\n\nIntroduction Rules\n\nThe input JSON always contains a field named results.\n\nDetermine whether records exist ONLY by inspecting results.\n\nIf results contains one or more objects, you MUST format those records.\n\nOnly reply \"I couldn't find any matching records.\" when results is an empty array ([]).\n\n- If there are no matching records, reply:\n\n\"I couldn't find any matching records.\"\n\n- If there is exactly one matching record, begin with:\n\n\"I found one matching receipt.\"\n\"I found one matching invoice.\"\n\"I found one matching quotation.\"\n\"I found one matching transport request.\"\n\n- If there are multiple matching records, begin with:\n\n\"I found X matching receipts.\"\n\"I found X matching invoices.\"\n\"I found X matching quotations.\"\n\"I found X matching transport requests.\"\n\nAnalytics Summary\n\nDisplay analytics ONLY when the user's request explicitly asks for analysis or statistics.\n\nExamples:\n\n- total\n- sum\n- average\n- analytics\n- statistics\n- insights\n- report\n- dashboard\n- highest\n- lowest\n- trends\n\nFor ordinary search requests such as:\n\n- Show me invoices\n- Show me Siemens invoices\n- Show me invoices over €6000\n- Show me quotations\n- Show me transport requests\n\nDO NOT display any analytics.\n\nDo not calculate totals.\n\nDo not calculate averages.\n\nDo not mention the total value of invoices.\n\nDo not infer trends.\n\nDo not provide business insights.\n\nSimply list the matching records.\n\nTransport Requests\n\nWhen available include:\n\n- High Priority\n- Medium Priority\n- Low Priority\n- Unique Customers\n- Total Weight\n- Average Weight\n\nInvoices\n\nWhen available include:\n\n- Total Invoice Value\n- Average Invoice Value\n- Number of Suppliers\n\nReceipts\n\nWhen available include:\n\n- Total Spend\n- Average Spend\n- Number of Merchants\n\nQuotations\n\nWhen available include:\n\n- Total Quotation Value\n- Average Quotation Value\n- Number of Companies\n\nDo not repeat these statistics later in the response.\n\nFormatting Rules\n\n- Present each record as a short, easy-to-read section.\n- Separate records with a blank line.\n- Only display fields containing meaningful business information.\n\nNever display a field whose value is:\n\n- Unknown\n- N/A\n- Not Available\n- Empty\n- Null\n- Missing\n\nSkip the entire field instead.\n\nDo not display placeholders for omitted fields.\n\nCurrency Formatting\n\n- Format monetary amounts naturally.\n- If the currency is EUR, display the € symbol (for example: €11.34).\n- If the currency is USD, display the $ symbol (for example: $7.99).\n- For all other currencies, display the amount followed by the currency code.\n\nPagination Rules\n\nThe input always contains:\n\n- results\n- totalResults\n- shownResults\n- remainingResults\n\nAlways use these provided values.\n\nNever calculate them yourself.\n\nIf remainingResults is greater than 0:\n\nAfter listing the displayed records, write:\n\n\"Showing the first X matching records.\"\n\nwhere X equals shownResults.\n\nThen write:\n\n\"There are Y additional matching records.\"\n\nwhere Y equals remainingResults.\n\nIf remainingResults equals 0:\n\nEnd the response immediately after the final displayed record.\n\nDo NOT write:\n\n- \"Showing the first...\"\n- \"There are additional...\"\n- \"There are 0 additional...\"\n- Any pagination sentence whatsoever.\n\nThis rule is mandatory.\n\nRecord Formatting\n\nReceipts\n\nDisplay only:\n\nVendor:\nReceipt Number:\nPurchase Date:\nAmount:\nPayment Method:\nStatus:\n\nInvoices\n\nDisplay only:\n\nSupplier:\nInvoice Number:\nInvoice Date:\nDue Date:\nAmount:\nPayment Terms:\nStatus:\n\nQuotations\n\nDisplay only:\n\nCompany:\nQuote Number:\nQuote Date:\nValid Until:\nAmount:\nService/Product:\nStatus:\n\nTransport Requests\n\nDisplay only:\n\nCustomer:\nPickup Location:\nDelivery Location:\nCargo Details:\nWeight:\nVehicle Type:\nLoading Date:\nDelivery Date:\nContact Person:\nPhone:\nPriority:\nStatus:\nSpecial Instructions:\n\nField Labels (MANDATORY)\n\nUse the field labels exactly as defined in the Record Formatting section.\n\nDo not replace labels with natural language.\n\nDo not rewrite labels.\n\nDo not paraphrase labels.\n\nIncorrect examples:\n\n- Invoice from Siemens AG\n- Receipt from Amazon\n- Quotation from Cisco\n- Transport request from Bosch\n\nCorrect examples:\n\nSupplier: Siemens AG\nVendor: Amazon\nCompany: Cisco\nCustomer: Bosch\n\nThis rule is mandatory.\n\nSummary Rules\n\nIf exactly one matching record is returned:\n\n- Use the Summary field if available.\n- Add one or two natural sentences of additional context.\n- Do not simply repeat fields already displayed.\n\nIf multiple matching records are returned:\n\n- Do not display the Summary field.\n- Do not summarize the records.\n- Simply list the matching records in the requested format.\n\nGeneral Rules\n\n- Use only the provided JSON.\n- Never invent information.\n- Never guess missing values.\n- Keep responses concise, professional and easy to read.\n- Use natural business language instead of repeating raw database values.\n- Produce responses that feel like a professional business assistant rather than a database export.\n\nSearch Result Rule\n\nIf the user is performing a search, your job is to retrieve records, not analyze them.\n\nDo not calculate totals.\n\nDo not aggregate values.\n\nDo not compare records.\n\nDo not infer conclusions.\n\nDo not mention the combined value of invoices or quotations.\n\nOnly display the records that match the search."
+            },
+            {
+              "content": "=User Request:\n{{ $('Atlas webhook').item.json.body.query }}\n\nSearch Results JSON:\n\n{{ JSON.stringify($json, null, 2) }}\n\nInstructions:\n\n- The JSON above is the ONLY source of truth.\n- Determine whether records exist ONLY from results.\n- If results contains one or more objects, NEVER reply \"I couldn't find any matching records.\"\n- If results is an empty array ([]), reply \"I couldn't find any matching records.\"\n- Format the response according to the system instructions."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        4224,
+        16
+      ],
+      "id": "02ea4620-a971-4320-af1e-3d084fb5eb51",
+      "name": "Response Formatter",
+      "credentials": {
+        "openAiApi": {
+          "id": "Qla3Fqrk6Okja416",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.entity }}",
+                    "rightValue": "invoice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5231281a-f81d-4086-ac2d-c80fe5aa14a7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Invoice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c54bba66-7857-4d40-862f-c77424c6b40f",
+                    "leftValue": "={{ $json.entity }}",
+                    "rightValue": "quotation",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Quotation"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bae5af41-06fb-49b2-abc3-2c9ccd424405",
+                    "leftValue": "={{ $json.entity }}",
+                    "rightValue": "receipt",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Receipt"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "10445684-da63-493e-9abf-13b10aded1f8",
+                    "leftValue": "={{ $json.entity }}",
+                    "rightValue": "transport_request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Transport"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0649587c-7d9e-48aa-b066-dc1b281fb139",
+                    "leftValue": "={{ $json.entity }}",
+                    "rightValue": "unknown",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Unknown"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2464,
+        96
+      ],
+      "id": "36520d1c-6805-4329-ada7-53acb1956e06",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst results = input.results || [];\nconst analytics = input.analytics || {};\n\nconst PAGE_SIZE = 20;\nconst SHOW_ALL_THRESHOLD = 20;\n\nlet displayedResults = results;\nlet shownResults = results.length;\nlet remainingResults = 0;\n\n// Only paginate if there are more than 20 results\nif (results.length > SHOW_ALL_THRESHOLD) {\n  displayedResults = results.slice(0, PAGE_SIZE);\n  shownResults = displayedResults.length;\n  remainingResults = results.length - shownResults;\n}\n\nreturn [\n  {\n    json: {\n      results: displayedResults,\n      analytics,\n      shownResults,\n      totalResults: results.length,\n      remainingResults\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4016,
+        32
+      ],
+      "id": "7625b05b-a220-4990-920a-063e13bbd17f",
+      "name": "Pagination Engine"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\nconst entity = $('Search Planner Interpreter').first().json.entity || \"unknown\";\n\n// ---------- Analytics ----------\n\nconst priorityCounts = {};\nconst statusCounts = {};\n\nconst supplierSet = new Set();\nconst vendorSet = new Set();\nconst companySet = new Set();\nconst customerSet = new Set();\n\nlet totalAmount = 0;\nlet amountCount = 0;\n\nlet totalWeight = 0;\nlet weightCount = 0;\n\nfor (const item of rows) {\n\n  const row = item.json;\n\n  // Priority\n  if (row.priority) {\n    priorityCounts[row.priority] =\n      (priorityCounts[row.priority] || 0) + 1;\n  }\n\n  // Status\n  if (row.status) {\n    statusCounts[row.status] =\n      (statusCounts[row.status] || 0) + 1;\n  }\n\n  // Supplier\n  if (row.supplier) {\n    supplierSet.add(row.supplier);\n  }\n\n  // Vendor\n  if (row.vendor) {\n    vendorSet.add(row.vendor);\n  }\n\n  // Company\n  if (row.company) {\n    companySet.add(row.company);\n  }\n\n  // Customer\n  if (row.customer) {\n    customerSet.add(row.customer);\n  }\n\n  // Amount\n  if (row.amount) {\n\n    const amount = parseFloat(row.amount);\n\n    if (!isNaN(amount)) {\n      totalAmount += amount;\n      amountCount++;\n    }\n\n  }\n\n  // Weight\n  if (row.weight) {\n\n    const weight = parseFloat(row.weight);\n\n    if (!isNaN(weight)) {\n      totalWeight += weight;\n      weightCount++;\n    }\n\n  }\n\n}\n\nconst analytics = {\n  entity,\n  totalResults: rows.length,\n\n  priorityCounts,\n  statusCounts,\n\n  uniqueSuppliers: supplierSet.size,\n  uniqueVendors: vendorSet.size,\n  uniqueCompanies: companySet.size,\n  uniqueCustomers: customerSet.size,\n\n  totalAmount,\n  averageAmount:\n    amountCount > 0\n      ? Number((totalAmount / amountCount).toFixed(2))\n      : 0,\n\n  totalWeight,\n  averageWeight:\n    weightCount > 0\n      ? Number((totalWeight / weightCount).toFixed(2))\n      : 0\n};\n\nreturn [\n  {\n    json: {\n      results: rows.map(item => item.json),\n      analytics\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        32
+      ],
+      "id": "cf90a0fc-4bde-476d-ab1b-bbbc61944e16",
+      "name": "Analytics Engine"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.query }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3008,
+        -592
+      ],
+      "id": "8fd13fa4-d0ab-4b6d-90ed-9bcfeab01729",
+      "name": "Invoice Search (SQL)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Xjzyz1RZG5XV7xor",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const plan = $('Search Planner Interpreter').item.json;\n\nlet sql = `\nSELECT *\nFROM invoices\n`;\n\nconst whereClauses = [];\n\nconst numericFields = [\n    'amount',\n    'vat_amount'\n];\n\nconst dateFields = [\n    'invoice_date',\n    'due_date'\n];\n\nfor (const filter of plan.filters) {\n\n    const isNumeric = numericFields.includes(filter.field);\n    const isDate = dateFields.includes(filter.field);\n\n    switch (filter.operator) {\n\n        case 'contains':\n\n            whereClauses.push(\n                `${filter.field} ILIKE '%${filter.value}%'`\n            );\n\n            break;\n\n        case 'equals':\n\n            if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') = DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} = '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'greater_than':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) > ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') > DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} > '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'less_than':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) < ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') < DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} < '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'greater_or_equal':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) >= ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') >= DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} >= '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'less_or_equal':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) <= ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') <= DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} <= '${filter.value}'`\n                );\n\n            }\n\n            break;\n    }\n}\n\nif (whereClauses.length > 0) {\n\n    sql += `\nWHERE\n${whereClauses.join('\\nAND ')}\n`;\n\n}\n\nsql += `\nORDER BY ${plan.sort.field} ${plan.sort.direction.toUpperCase()}\nLIMIT ${plan.limit};\n`;\n\n// Extract supplier/company name from planner filters\nconst companyFilter = plan.filters.find(\n    filter => filter.field === \"supplier\"\n);\n\nconst company = companyFilter\n    ? companyFilter.value\n    : null;\n\nreturn [\n    {\n        json: {\n            query: sql,\n            company,\n            entity: \"invoice\"\n        }\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        -592
+      ],
+      "id": "5ce655df-8e32-4d23-bed2-0fa075f22185",
+      "name": "Invoice SQL Builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const plan = $('Search Planner Interpreter').item.json;\n\nlet sql = `\nSELECT *\nFROM receipts\n`;\n\nconst whereClauses = [];\n\nconst numericFields = [\n    'amount',\n    'vat_amount'\n];\n\nconst dateFields = [\n    'purchase_date'\n];\n\nfor (const filter of plan.filters) {\n\n    const isNumeric = numericFields.includes(filter.field);\n    const isDate = dateFields.includes(filter.field);\n\n    switch (filter.operator) {\n\n        case 'contains':\n\n            whereClauses.push(\n                `${filter.field} ILIKE '%${filter.value}%'`\n            );\n\n            break;\n\n        case 'equals':\n\n            if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') = DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} = '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'greater_than':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) > ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') > DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} > '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'less_than':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) < ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') < DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} < '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'greater_or_equal':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) >= ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') >= DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} >= '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'less_or_equal':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) <= ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') <= DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} <= '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n    }\n\n}\n\nif (whereClauses.length > 0) {\n\n    sql += `\nWHERE\n${whereClauses.join('\\nAND ')}\n`;\n\n}\n\nsql += `\nORDER BY ${plan.sort.field} ${plan.sort.direction.toUpperCase()}\nLIMIT ${plan.limit};\n`;\n\n// Extract vendor/company name from planner filters\nconst companyFilter = plan.filters.find(\n    filter => filter.field === \"vendor\"\n);\n\nconst company = companyFilter\n    ? companyFilter.value\n    : null;\n\nreturn [\n    {\n        json: {\n            query: sql,\n            company,\n            entity: \"receipt\"\n        }\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        -48
+      ],
+      "id": "3aa8e77c-abd8-4a5b-a088-bb3eb36ca7a9",
+      "name": "Receipt SQL Builder"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.query }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2928,
+        -48
+      ],
+      "id": "88c49a71-871e-4110-8531-1dd5163af217",
+      "name": "Receipt Search (SQL)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Xjzyz1RZG5XV7xor",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.query }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2992,
+        -304
+      ],
+      "id": "6667ed04-4b19-460f-924f-566e8e72dd54",
+      "name": "Quotation Search (SQL)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Xjzyz1RZG5XV7xor",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.query }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2944,
+        192
+      ],
+      "id": "d0575db5-b9de-4818-b95c-508becddf682",
+      "name": "Transport Search (SQL)",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "Xjzyz1RZG5XV7xor",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const plan = $('Search Planner Interpreter').item.json;\n\nlet sql = `\nSELECT *\nFROM quotations\n`;\n\nconst whereClauses = [];\n\nconst numericFields = [\n    'amount'\n];\n\nconst dateFields = [\n    'quote_date',\n    'valid_until'\n];\n\nfor (const filter of plan.filters) {\n\n    const isNumeric = numericFields.includes(filter.field);\n    const isDate = dateFields.includes(filter.field);\n\n    switch (filter.operator) {\n\n        case 'contains':\n\n            whereClauses.push(\n                `${filter.field} ILIKE '%${filter.value}%'`\n            );\n\n            break;\n\n        case 'equals':\n\n            if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') = DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} = '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'greater_than':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) > ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') > DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} > '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'less_than':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) < ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') < DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} < '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'greater_or_equal':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) >= ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') >= DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} >= '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'less_or_equal':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(${filter.field} AS NUMERIC) <= ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') <= DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} <= '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n    }\n\n}\n\nif (whereClauses.length > 0) {\n\n    sql += `\nWHERE\n${whereClauses.join('\\nAND ')}\n`;\n\n}\n\nsql += `\nORDER BY ${plan.sort.field} ${plan.sort.direction.toUpperCase()}\nLIMIT ${plan.limit};\n`;\n\n// Extract company name from planner filters\nconst companyFilter = plan.filters.find(\n    filter => filter.field === \"company\"\n);\n\nconst company = companyFilter\n    ? companyFilter.value\n    : null;\n\nreturn [\n    {\n        json: {\n            query: sql,\n            company,\n            entity: \"quotation\"\n        }\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        -304
+      ],
+      "id": "e6fb9293-2e85-4ac4-98ce-95ce2fa315bc",
+      "name": "Quotation SQL Builder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const company = $json.company || \"that company\";\n\nreturn [\n  {\n    json: {\n      response: `You mentioned \"${company}\", but I couldn't determine what type of records you're looking for.\n\nPlease specify one of the following:\n\n• Invoices\n• Quotations\n• Receipts\n• Transport Requests`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2832,
+        464
+      ],
+      "id": "49a61cd8-fd6a-4116-8a5a-7ca58203eb93",
+      "name": "Clarification Response"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        5136,
+        64
+      ],
+      "id": "2dc380d8-06f4-484b-9a6f-e3ea62f3d1f5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response =\n$json.response ??\n$json.output?.[0]?.content?.[0]?.text ??\n\"No response generated.\";\n\nreturn [\n  {\n    json: {\n      response\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4736,
+        -16
+      ],
+      "id": "22f7ed03-b49c-48e2-a705-e8aaae8c3255",
+      "name": "API Response"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "api/v1/search",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1728,
+        144
+      ],
+      "id": "129153fd-d5e4-4628-bad7-066b9ea9c2ac",
+      "name": "Atlas webhook",
+      "webhookId": "f265a50c-d5b6-4fe1-9bf6-f17bb0217709"
+    },
+    {
+      "parameters": {
+        "jsCode": "const entity = $json.entity || \"record\";\nconst company = $json.company || \"your search\";\n\nconst plural =\n  entity === \"transport request\"\n    ? \"transport requests\"\n    : `${entity}s`;\n\nreturn [\n  {\n    json: {\n      response: `No ${plural} were found for ${company}.`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4016,
+        -592
+      ],
+      "id": "017a71b5-3d56-494d-b863-b97abef0d821",
+      "name": "No Results Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "454cfe33-c84d-4768-a675-4a73c6ed1acd",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3296,
+        -48
+      ],
+      "id": "af59816d-3348-4d55-88d3-df48161bc57a",
+      "name": "Receipt Filters?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "454cfe33-c84d-4768-a675-4a73c6ed1acd",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3296,
+        192
+      ],
+      "id": "1b53ac1f-55d2-4ca6-9b92-8c0e60cdb591",
+      "name": "Transport Filters?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "454cfe33-c84d-4768-a675-4a73c6ed1acd",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3360,
+        -304
+      ],
+      "id": "f0c5756e-17b2-417b-8f18-d93eaaeb179b",
+      "name": "Quotation Filters?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "454cfe33-c84d-4768-a675-4a73c6ed1acd",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3376,
+        -576
+      ],
+      "id": "8aef9852-2acb-44bd-9483-6d69586b6052",
+      "name": "Invoice Filters?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $('Invoice SQL Builder').first().json;\n\nreturn $input.all().map(item => ({\n  json: {\n    ...item.json,\n    query: context.query,\n    company: context.company,\n    entity: context.entity\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        -592
+      ],
+      "id": "7e0d49ad-0342-42b3-b9aa-44adf33b9e02",
+      "name": "Invoice Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $('Quotation SQL Builder').first().json;\n\nreturn $input.all().map(item => ({\n  json: {\n    ...item.json,\n    query: context.query,\n    company: context.company,\n    entity: context.entity\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3184,
+        -304
+      ],
+      "id": "c37674d5-7105-4dfb-808f-6df7b74824f9",
+      "name": "Quotation Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $('Receipt SQL Builder').first().json;\n\nreturn $input.all().map(item => ({\n  json: {\n    ...item.json,\n    query: context.query,\n    company: context.company,\n    entity: context.entity\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3104,
+        -48
+      ],
+      "id": "6136ad05-d6b8-4424-a7a6-ce8a7fe09e66",
+      "name": "Receipt Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "const context = $('Transport SQL Builder').first().json;\n\nreturn $input.all().map(item => ({\n  json: {\n    ...item.json,\n    query: context.query,\n    company: context.company,\n    entity: context.entity\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        192
+      ],
+      "id": "a9fd73eb-bae5-4d74-b268-65b110d0daeb",
+      "name": "Transprot Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "const plan = $('Search Planner Interpreter').item.json;\n\nlet sql = `\nSELECT *\nFROM transport_requests\n`;\n\nconst whereClauses = [];\n\nconst numericFields = [\n    'weight'\n];\n\nconst dateFields = [\n    'loading_date',\n    'delivery_date',\n    'requested_date'\n];\n\nfor (const filter of plan.filters) {\n\n    const isNumeric = numericFields.includes(filter.field);\n    const isDate = dateFields.includes(filter.field);\n\n    switch (filter.operator) {\n\n        case 'contains':\n\n            whereClauses.push(\n                `${filter.field} ILIKE '%${filter.value}%'`\n            );\n\n            break;\n\n        case 'equals':\n\n            if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') = DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} = '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'greater_than':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(REGEXP_REPLACE(${filter.field}, '[^0-9.]', '', 'g') AS NUMERIC) > ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') > DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} > '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'less_than':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(REGEXP_REPLACE(${filter.field}, '[^0-9.]', '', 'g') AS NUMERIC) < ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') < DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} < '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'greater_or_equal':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(REGEXP_REPLACE(${filter.field}, '[^0-9.]', '', 'g') AS NUMERIC) >= ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') >= DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} >= '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n        case 'less_or_equal':\n\n            if (isNumeric) {\n\n                whereClauses.push(\n                    `CAST(REGEXP_REPLACE(${filter.field}, '[^0-9.]', '', 'g') AS NUMERIC) <= ${filter.value}`\n                );\n\n            } else if (isDate) {\n\n                whereClauses.push(\n                    `TO_DATE(NULLIF(${filter.field}, 'Unknown'), 'DD FMMonth YYYY') <= DATE '${filter.value}'`\n                );\n\n            } else {\n\n                whereClauses.push(\n                    `${filter.field} <= '${filter.value}'`\n                );\n\n            }\n\n            break;\n\n    }\n\n}\n\nif (whereClauses.length > 0) {\n\n    sql += `\nWHERE\n${whereClauses.join('\\nAND ')}\n`;\n\n}\n\nsql += `\nORDER BY ${plan.sort.field} ${plan.sort.direction.toUpperCase()}\nLIMIT ${plan.limit};\n`;\n\n// Extract customer/company name from planner filters\nconst companyFilter = plan.filters.find(\n    filter => filter.field === \"customer\"\n);\n\nconst company = companyFilter\n    ? companyFilter.value\n    : null;\n\nreturn [\n    {\n        json: {\n            query: sql,\n            company,\n            entity: \"transport request\"\n        }\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2736,
+        192
+      ],
+      "id": "87b492a9-721a-4a05-8f1b-a7c85b36b15e",
+      "name": "Transport SQL Builder"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Search Planner": {
+      "main": [
+        [
+          {
+            "node": "Search Planner Interpreter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Planner Interpreter": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Engine": {
+      "main": [
+        [
+          {
+            "node": "Analytics Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model #1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Search Planner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Response Formatter": {
+      "main": [
+        [
+          {
+            "node": "API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Invoice SQL Builder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Quotation SQL Builder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Receipt SQL Builder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Transport SQL Builder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Clarification Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pagination Engine": {
+      "main": [
+        [
+          {
+            "node": "Response Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analytics Engine": {
+      "main": [
+        [
+          {
+            "node": "Pagination Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Search (SQL)": {
+      "main": [
+        [
+          {
+            "node": "Invoice Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice SQL Builder": {
+      "main": [
+        [
+          {
+            "node": "Invoice Search (SQL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receipt SQL Builder": {
+      "main": [
+        [
+          {
+            "node": "Receipt Search (SQL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receipt Search (SQL)": {
+      "main": [
+        [
+          {
+            "node": "Receipt Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quotation Search (SQL)": {
+      "main": [
+        [
+          {
+            "node": "Quotation Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transport Search (SQL)": {
+      "main": [
+        [
+          {
+            "node": "Transprot Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quotation SQL Builder": {
+      "main": [
+        [
+          {
+            "node": "Quotation Search (SQL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clarification Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atlas webhook": {
+      "main": [
+        [
+          {
+            "node": "Search Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Results Response": {
+      "main": [
+        [
+          {
+            "node": "API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receipt Filters?": {
+      "main": [
+        [
+          {
+            "node": "Filter Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Results Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transport Filters?": {
+      "main": [
+        [
+          {
+            "node": "Filter Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Results Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quotation Filters?": {
+      "main": [
+        [
+          {
+            "node": "Filter Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Results Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Filters?": {
+      "main": [
+        [
+          {
+            "node": "Filter Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Results Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Context": {
+      "main": [
+        [
+          {
+            "node": "Invoice Filters?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quotation Context": {
+      "main": [
+        [
+          {
+            "node": "Quotation Filters?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Receipt Context": {
+      "main": [
+        [
+          {
+            "node": "Receipt Filters?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transprot Context": {
+      "main": [
+        [
+          {
+            "node": "Transport Filters?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transport SQL Builder": {
+      "main": [
+        [
+          {
+            "node": "Transport Search (SQL)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "76715c98-77d7-433f-a914-8e4e12e6c2ba",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8dd98625748fda9a5dcac0c4c42ffc05ea959e2dca03d714d692a5887b9acc68"
+  },
+  "id": "Qkpqa5z6JnMygzZ0",
+  "tags": []
+}
